@@ -294,11 +294,21 @@ export class CommandInsertInInsertMode extends BaseCommand {
     const char = this.keysPressed[this.keysPressed.length - 1];
 
     if (vimState.isMultiCursor) {
-      vimState.recordedState.transformations.push({
-        type: 'insertText',
-        text: char,
-        position: vimState.cursorStopPosition,
-      });
+      if (!vimState.isActiveSelection) {
+        vimState.recordedState.transformations.push({
+          type: 'insertText',
+          text: char,
+          position: vimState.cursorStopPosition,
+        });
+      } else {
+        vimState.recordedState.transformations.push({
+          type: 'replaceText',
+          text: char,
+          start: vimState.cursorStartPosition,
+          end: vimState.cursorStopPosition,
+        });
+        vimState.isActiveSelection = false;
+      }
     } else {
       vimState.recordedState.transformations.push({
         type: 'insertTextVSCode',

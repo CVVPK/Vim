@@ -111,6 +111,8 @@ export class ModeHandler implements vscode.Disposable {
       (e.selections.length !== this.vimState.cursors.length || this.vimState.isMultiCursor) &&
       this.vimState.currentMode !== Mode.VisualBlock
     ) {
+      // Check if any of our selections aren't empty
+      // this.vimState.hasActiveSelections = e.selections.some(sel => !sel.isEmpty);
       // Number of selections changed, make sure we know about all of them still
       this.vimState.cursors = e.textEditor.selections.map(
         sel =>
@@ -1282,8 +1284,8 @@ export class ModeHandler implements vscode.Disposable {
           }
           case Mode.Normal:
           case Mode.Insert: {
-            for (const { stop: cursorStop } of vimState.cursors) {
-              selections.push(new vscode.Selection(cursorStop, cursorStop));
+            for (const { stop } of vimState.cursors) {
+              selections.push(new vscode.Selection(stop, stop));
             }
             break;
           }

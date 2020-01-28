@@ -252,8 +252,6 @@ export class VimState implements vscode.Disposable {
 
   public nvim: NeovimWrapper;
 
-  public isActiveSelection: boolean;
-
   public constructor(editor: vscode.TextEditor) {
     this.editor = editor;
     this.identity = EditorIdentity.fromEditor(editor);

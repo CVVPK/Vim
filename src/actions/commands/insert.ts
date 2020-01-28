@@ -293,28 +293,34 @@ export class CommandInsertInInsertMode extends BaseCommand {
   public async exec(position: Position, vimState: VimState): Promise<VimState> {
     const char = this.keysPressed[this.keysPressed.length - 1];
 
-    if (vimState.isMultiCursor) {
-      if (!vimState.isActiveSelection) {
-        vimState.recordedState.transformations.push({
-          type: 'insertText',
-          text: char,
-          position: vimState.cursorStopPosition,
-        });
-      } else {
-        vimState.recordedState.transformations.push({
-          type: 'replaceText',
-          text: char,
-          start: vimState.cursorStartPosition,
-          end: vimState.cursorStopPosition,
-        });
-        vimState.isActiveSelection = false;
-      }
-    } else {
-      vimState.recordedState.transformations.push({
-        type: 'insertTextVSCode',
-        text: char,
-      });
-    }
+    // if (vimState.isMultiCursor) {
+
+    //   if (!vimState.isActiveSelection) {
+    //     vimState.recordedState.transformations.push({
+    //       type: 'insertText',
+    //       text: char,
+    //       position: vimState.cursorStopPosition,
+    //     });
+    //   } else {
+    //     vimState.recordedState.transformations.push({
+    //       type: 'replaceText',
+    //       text: char,
+    //       start: vimState.cursorStartPosition,
+    //       end: vimState.cursorStopPosition,
+    //     });
+    //     vimState.isActiveSelection = false;
+    //   }
+    // } else {
+    //   vimState.recordedState.transformations.push({
+    //     type: 'insertTextVSCode',
+    //     text: char,
+    //   });
+    // }
+    vimState.recordedState.transformations.push({
+      type: 'insertTextVSCode',
+      text: char,
+      cursorIndex: this.multicursorIndex,
+    });
 
     return vimState;
   }

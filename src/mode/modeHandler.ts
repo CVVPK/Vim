@@ -908,127 +908,134 @@ export class ModeHandler implements vscode.Disposable {
         });
       }
     }
+    if (this.vimState.isMultiCursor) {
+      if (
+        otherTransformations[0]?.type === 'insertTextVSCode' &&
+        otherTransformations.every(t => t.type === 'insertTextVSCode')
+      ) {
+        await TextEditor.insert(otherTransformations[0].text);
+      }
+    } else {
+      for (const command of otherTransformations) {
+        switch (command.type) {
+          case 'insertTextVSCode':
+            await TextEditor.insert(command.text);
 
-    for (const command of otherTransformations) {
-      switch (command.type) {
-        case 'insertTextVSCode':
-          await TextEditor.insert(command.text);
-
-          vimState.cursorStartPosition = Position.FromVSCodePosition(
-            this.vimState.editor.selection.start
-          );
-          vimState.cursorStopPosition = Position.FromVSCodePosition(
-            this.vimState.editor.selection.end
-          );
-          break;
-
-        case 'showCommandHistory':
-          let cmd = await commandLine.showHistory(vimState.currentCommandlineText);
-          if (cmd && cmd.length !== 0) {
-            await commandLine.Run(cmd, this.vimState);
-            this.updateView(this.vimState);
-          }
-          break;
-
-        case 'showSearchHistory':
-          const searchState = await globalState.showSearchHistory();
-          if (searchState) {
-            globalState.searchState = searchState;
-            const nextMatch = searchState.getNextSearchMatchPosition(
-              vimState.cursorStartPosition,
-              command.direction
-            );
-
-            vimState.cursorStopPosition = nextMatch.pos;
-            this.updateView(this.vimState);
-            reportSearch(nextMatch.index, searchState.matchRanges.length, vimState);
-          }
-          break;
-
-        case 'dot':
-          if (!globalState.previousFullAction) {
-            return vimState; // TODO(bell)
-          }
-
-          const clonedAction = globalState.previousFullAction.clone();
-
-          await this.rerunRecordedState(vimState, globalState.previousFullAction);
-
-          globalState.previousFullAction = clonedAction;
-          break;
-        case 'macro':
-          let recordedMacro = (await Register.getByKey(command.register)).text as RecordedState;
-
-          vimState.isReplayingMacro = true;
-
-          if (command.register === ':') {
-            await commandLine.Run(recordedMacro.commandString, vimState);
-          } else if (command.replay === 'contentChange') {
-            vimState = await this.runMacro(vimState, recordedMacro);
-          } else {
-            let keyStrokes: string[] = [];
-            for (let action of recordedMacro.actionsRun) {
-              keyStrokes = keyStrokes.concat(action.keysPressed);
-            }
-            this.vimState.recordedState = new RecordedState();
-            await this.handleMultipleKeyEvents(keyStrokes);
-          }
-
-          vimState.isReplayingMacro = false;
-          vimState.historyTracker.lastInvokedMacro = recordedMacro;
-
-          if (vimState.lastMovementFailed) {
-            // movement in last invoked macro failed then we should stop all following repeating macros.
-            // Besides, we should reset `lastMovementFailed`.
-            vimState.lastMovementFailed = false;
-            return;
-          }
-
-          break;
-        case 'contentChange':
-          for (const change of command.changes) {
-            await TextEditor.insert(change.text);
-            vimState.cursorStopPosition = Position.FromVSCodePosition(
+            vimState.cursorStartPosition = Position.FromVSCodePosition(
               this.vimState.editor.selection.start
             );
-          }
-          const newPos = vimState.cursorStopPosition.add(command.diff);
-          this.vimState.editor.selection = new vscode.Selection(newPos, newPos);
-          break;
-        case 'tab':
-          await vscode.commands.executeCommand('tab');
-          if (command.diff) {
-            if (command.cursorIndex === undefined) {
-              throw new Error('No cursor index - this should never ever happen!');
+            vimState.cursorStopPosition = Position.FromVSCodePosition(
+              this.vimState.editor.selection.end
+            );
+            break;
+
+          case 'showCommandHistory':
+            let cmd = await commandLine.showHistory(vimState.currentCommandlineText);
+            if (cmd && cmd.length !== 0) {
+              await commandLine.Run(cmd, this.vimState);
+              this.updateView(this.vimState);
+            }
+            break;
+
+          case 'showSearchHistory':
+            const searchState = await globalState.showSearchHistory();
+            if (searchState) {
+              globalState.searchState = searchState;
+              const nextMatch = searchState.getNextSearchMatchPosition(
+                vimState.cursorStartPosition,
+                command.direction
+              );
+
+              vimState.cursorStopPosition = nextMatch.pos;
+              this.updateView(this.vimState);
+              reportSearch(nextMatch.index, searchState.matchRanges.length, vimState);
+            }
+            break;
+
+          case 'dot':
+            if (!globalState.previousFullAction) {
+              return vimState; // TODO(bell)
             }
 
-            if (!accumulatedPositionDifferences[command.cursorIndex]) {
-              accumulatedPositionDifferences[command.cursorIndex] = [];
+            const clonedAction = globalState.previousFullAction.clone();
+
+            await this.rerunRecordedState(vimState, globalState.previousFullAction);
+
+            globalState.previousFullAction = clonedAction;
+            break;
+          case 'macro':
+            let recordedMacro = (await Register.getByKey(command.register)).text as RecordedState;
+
+            vimState.isReplayingMacro = true;
+
+            if (command.register === ':') {
+              await commandLine.Run(recordedMacro.commandString, vimState);
+            } else if (command.replay === 'contentChange') {
+              vimState = await this.runMacro(vimState, recordedMacro);
+            } else {
+              let keyStrokes: string[] = [];
+              for (let action of recordedMacro.actionsRun) {
+                keyStrokes = keyStrokes.concat(action.keysPressed);
+              }
+              this.vimState.recordedState = new RecordedState();
+              await this.handleMultipleKeyEvents(keyStrokes);
             }
 
-            accumulatedPositionDifferences[command.cursorIndex].push(command.diff);
-          }
-          break;
-        case 'reindent':
-          await vscode.commands.executeCommand('editor.action.reindentselectedlines');
-          if (command.diff) {
-            if (command.cursorIndex === undefined) {
-              throw new Error('No cursor index - this should never ever happen!');
+            vimState.isReplayingMacro = false;
+            vimState.historyTracker.lastInvokedMacro = recordedMacro;
+
+            if (vimState.lastMovementFailed) {
+              // movement in last invoked macro failed then we should stop all following repeating macros.
+              // Besides, we should reset `lastMovementFailed`.
+              vimState.lastMovementFailed = false;
+              return;
             }
 
-            if (!accumulatedPositionDifferences[command.cursorIndex]) {
-              accumulatedPositionDifferences[command.cursorIndex] = [];
+            break;
+          case 'contentChange':
+            for (const change of command.changes) {
+              await TextEditor.insert(change.text);
+              vimState.cursorStopPosition = Position.FromVSCodePosition(
+                this.vimState.editor.selection.start
+              );
             }
+            const newPos = vimState.cursorStopPosition.add(command.diff);
+            this.vimState.editor.selection = new vscode.Selection(newPos, newPos);
+            break;
+          case 'tab':
+            await vscode.commands.executeCommand('tab');
+            if (command.diff) {
+              if (command.cursorIndex === undefined) {
+                throw new Error('No cursor index - this should never ever happen!');
+              }
 
-            accumulatedPositionDifferences[command.cursorIndex].push(command.diff);
-          }
-          break;
-        default:
-          this._logger.warn(`Unhandled text transformation type: ${command.type}.`);
-          break;
+              if (!accumulatedPositionDifferences[command.cursorIndex]) {
+                accumulatedPositionDifferences[command.cursorIndex] = [];
+              }
+
+              accumulatedPositionDifferences[command.cursorIndex].push(command.diff);
+            }
+            break;
+          case 'reindent':
+            await vscode.commands.executeCommand('editor.action.reindentselectedlines');
+            if (command.diff) {
+              if (command.cursorIndex === undefined) {
+                throw new Error('No cursor index - this should never ever happen!');
+              }
+
+              if (!accumulatedPositionDifferences[command.cursorIndex]) {
+                accumulatedPositionDifferences[command.cursorIndex] = [];
+              }
+
+              accumulatedPositionDifferences[command.cursorIndex].push(command.diff);
+            }
+            break;
+          default:
+            this._logger.warn(`Unhandled text transformation type: ${command.type}.`);
+            break;
+        }
       }
     }
-
     const selections = this.vimState.editor.selections.map(x => {
       let y = Range.FromVSCodeSelection(x);
       y = y.start.isBefore(y.stop) ? y.withNewStop(y.stop.getLeftThroughLineBreaks(true)) : y;

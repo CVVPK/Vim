@@ -294,13 +294,12 @@ export class CommandInsertInInsertMode extends BaseCommand {
     const char = this.keysPressed[this.keysPressed.length - 1];
 
     // if (vimState.isMultiCursor) {
-
     //   if (!vimState.isActiveSelection) {
-    //     vimState.recordedState.transformations.push({
-    //       type: 'insertText',
-    //       text: char,
-    //       position: vimState.cursorStopPosition,
-    //     });
+    // vimState.recordedState.transformations.push({
+    //   type: 'insertText',
+    //   text: char,
+    //   position: vimState.cursorStopPosition,
+    // });
     //   } else {
     //     vimState.recordedState.transformations.push({
     //       type: 'replaceText',
@@ -319,7 +318,6 @@ export class CommandInsertInInsertMode extends BaseCommand {
     vimState.recordedState.transformations.push({
       type: 'insertTextVSCode',
       text: char,
-      cursorIndex: this.multicursorIndex,
     });
 
     return vimState;

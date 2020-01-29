@@ -30,6 +30,7 @@ import {
   areAnyTransformationsOverlapping,
   isTextTransformation,
   TextTransformations,
+  InsertTextVSCodeTransformation,
 } from './../transformations/transformations';
 import { globalState } from '../state/globalState';
 import { reportSearch } from '../util/statusBarTextUtils';
@@ -908,13 +909,15 @@ export class ModeHandler implements vscode.Disposable {
         });
       }
     }
-    if (this.vimState.isMultiCursor) {
-      if (
-        otherTransformations[0]?.type === 'insertTextVSCode' &&
-        otherTransformations.every(t => t.type === 'insertTextVSCode')
-      ) {
-        await TextEditor.insert(otherTransformations[0].text);
-      }
+
+    if (
+      this.vimState.isMultiCursor &&
+      otherTransformations[0]?.type === 'insertTextVSCode' &&
+      otherTransformations.every(t => t?.type === 'insertTextVSCode')
+    ) {
+      const { text } = otherTransformations[0];
+
+      vscode.commands.executeCommand('default:type', { text });
     } else {
       for (const command of otherTransformations) {
         switch (command.type) {

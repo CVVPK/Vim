@@ -244,10 +244,16 @@ export class CommandBackspaceInInsertMode extends BaseCommand {
 
   public async exec(position: Position, vimState: VimState): Promise<VimState> {
     const line = TextEditor.getLineAt(position).text;
-    const selection = TextEditor.getSelection();
+    let selection = TextEditor.getSelection();
 
     if (!selection.isEmpty) {
       // If a selection is active, delete it
+      if (vimState.isMultiCursor) {
+        // Try to find the selection that contains `position`
+        // so that we can create the correct `range`
+        const found = vimState.editor.selections.find(s => s.contains(position));
+        selection = found || selection;
+      }
       vimState.recordedState.transformations.push({
         type: 'deleteRange',
         range: new Range(selection.start as Position, selection.end as Position),
@@ -293,31 +299,10 @@ export class CommandInsertInInsertMode extends BaseCommand {
   public async exec(position: Position, vimState: VimState): Promise<VimState> {
     const char = this.keysPressed[this.keysPressed.length - 1];
 
-    // if (vimState.isMultiCursor) {
-    //   if (!vimState.isActiveSelection) {
-    // vimState.recordedState.transformations.push({
-    //   type: 'insertText',
-    //   text: char,
-    //   position: vimState.cursorStopPosition,
-    // });
-    //   } else {
-    //     vimState.recordedState.transformations.push({
-    //       type: 'replaceText',
-    //       text: char,
-    //       start: vimState.cursorStartPosition,
-    //       end: vimState.cursorStopPosition,
-    //     });
-    //     vimState.isActiveSelection = false;
-    //   }
-    // } else {
-    //   vimState.recordedState.transformations.push({
-    //     type: 'insertTextVSCode',
-    //     text: char,
-    //   });
-    // }
     vimState.recordedState.transformations.push({
       type: 'insertTextVSCode',
       text: char,
+      isMultiCursor: vimState.isMultiCursor,
     });
 
     return vimState;

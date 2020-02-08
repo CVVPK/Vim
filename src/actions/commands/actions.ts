@@ -17,7 +17,10 @@ import { Mode, visualBlockGetTopLeftPosition, isVisualMode } from './../../mode/
 import { Register, RegisterMode } from './../../register/register';
 import { SearchDirection, SearchState } from './../../state/searchState';
 import { EditorScrollByUnit, EditorScrollDirection, TextEditor } from './../../textEditor';
-import { isTextTransformation } from './../../transformations/transformations';
+import {
+  isTextTransformation,
+  isMultiCursorTextTransformation,
+} from './../../transformations/transformations';
 import { RegisterAction } from './../base';
 import { BaseAction } from './../base';
 import { commandLine } from './../../cmd_line/commandLine';
@@ -220,23 +223,14 @@ export abstract class BaseCommand extends BaseAction {
 
     let cursorIndex = 0;
     for (const { start, stop } of cursorsToIterateOver) {
-      // const selectionIndex = vimState.editor.selections.findIndex(
-      //   s => s.contains(stop) && !s.isEmpty
-      // );
-
       this.multicursorIndex = cursorIndex++;
 
       vimState.cursorStopPosition = stop;
       vimState.cursorStartPosition = start;
 
-      // vimState.isActiveSelection = selectionIndex !== -1;
-
       for (let j = 0; j < timesToRepeat; j++) {
         vimState = await this.exec(stop, vimState);
       }
-      // if (!vimState.isActiveSelection) {
-      //   vimState.editor.selections[selectionIndex] = new vscode.Selection(stop, stop);
-      // }
 
       resultingCursors.push(new Range(vimState.cursorStartPosition, vimState.cursorStopPosition));
 
